@@ -22,7 +22,7 @@ from typing import Any, Callable, Dict, Optional, Sequence, Hashable, Type, Type
 
 import torch
 import pytorch_lightning as pl
-from pytorch_lightning.core.memory import ModelSummary
+from lightning.pytorch.callbacks.model_summary import ModelSummary
 from loguru import logger
 
 from nndet.io.load import save_txt
