@@ -4,7 +4,7 @@ scipy
 scikit-learn
 scikit-image>=0.14
 pandas>=0.8.1
-nevergrad<=0.4.2
+nevergrad
 dicom2nifti
 medpy
 SimpleITK
