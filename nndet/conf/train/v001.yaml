@@ -27,8 +27,8 @@ augment_cfg:
   # splits; Default: splits_final
 
 trainer_cfg:
-  gpus: 1 # number of gpus
-  accelerator: # distributed backend
+  gpus: 2 # number of gpus
+  accelerator: "cuda" # distributed backend
   precision: 16 # mixed precision
   amp_backend: native # mixed precision backend
   amp_level: O1 # when mixed precision backend is APEX use O1

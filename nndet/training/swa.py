@@ -22,7 +22,7 @@ from loguru import logger
 import torch
 from torch.optim.lr_scheduler import _LRScheduler
 from pytorch_lightning.callbacks import StochasticWeightAveraging
-from pytorch_lightning.trainer.optimizers import _get_default_scheduler_config
+# from pytorch_lightning.trainer.optimizers import _get_default_scheduler_config
 from pytorch_lightning.utilities import rank_zero_warn
 
 from nndet.training.learning_rate import CycleLinear
@@ -54,7 +54,7 @@ class BaseSWA(StochasticWeightAveraging):
         """
         super().__init__(
             swa_epoch_start=swa_epoch_start,
-            swa_lrs=None,
+            swa_lrs=0.001,
             annealing_epochs=10,
             annealing_strategy="cos",
             avg_fn=avg_fn,
@@ -84,7 +84,8 @@ class BaseSWA(StochasticWeightAveraging):
             self._average_model = self._average_model.to(self._device or pl_module.device)
 
             _scheduler = self.get_swa_scheduler(optimizer)
-            self._swa_scheduler = _get_default_scheduler_config()
+            # self._swa_scheduler = _get_default_scheduler_config()
+            self._swa_scheduler = {}
             if not isinstance(_scheduler, dict):
                 _scheduler = {"scheduler": _scheduler}
             self._swa_scheduler.update(_scheduler)

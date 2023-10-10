@@ -268,23 +268,18 @@ def _train(
     logger.info(f"Using {plugins} plugins for training")
 
     trainer = pl.Trainer(
-        gpus=list(range(num_gpus)) if num_gpus > 1 else num_gpus,
+        devices=list(range(num_gpus)) if num_gpus > 1 else num_gpus,
         accelerator=cfg["trainer_cfg"]["accelerator"],
         precision=cfg["trainer_cfg"]["precision"],
-        amp_backend=cfg["trainer_cfg"]["amp_backend"],
-        amp_level=cfg["trainer_cfg"]["amp_level"],
         benchmark=cfg["trainer_cfg"]["benchmark"],
         deterministic=cfg["trainer_cfg"]["deterministic"],
         callbacks=callbacks,
         logger=pl_logger,
         max_epochs=module.max_epochs,
-        progress_bar_refresh_rate=None if bool(int(os.getenv("det_verbose", 1))) else 0,
-        reload_dataloaders_every_epoch=False,
         num_sanity_val_steps=10,
-        weights_summary='full',
         plugins=plugins,
-        terminate_on_nan=True,  # TODO: make modular
-        move_metrics_to_cpu=False,
+        limit_train_batches=100,
+        strategy='ddp_find_unused_parameters_true',
         **trainer_kwargs
     )
     trainer.fit(module, datamodule=datamodule)
