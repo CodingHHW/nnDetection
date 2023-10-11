@@ -25,7 +25,7 @@ from typing import List
 
 import torch
 import pytorch_lightning as pl
-from pytorch_lightning.loggers import MLFlowLogger
+from lightning.pytorch import loggers as pl_loggers
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 
 from loguru import logger
@@ -185,20 +185,14 @@ def _train(
 
     train_dir = init_train_dir(cfg)
 
-    pl_logger = MLFlowLogger(
-        experiment_name=cfg["task"],
-        tags={
-            "host": socket.gethostname(),
-            "fold": cfg["exp"]["fold"],
-            "task": cfg["task"],
-            "job_id": os.getenv('LSB_JOBID', 'no_id'),
-            "mlflow.runName": cfg["exp"]["id"],
-            },
-        save_dir=os.getenv("MLFLOW_TRACKING_URI", "./mlruns"),
+    tensorboard = pl_loggers.TensorBoardLogger(
+        save_dir=os.getenv("MLFLOW_TRACKING_URI"),
+        name=cfg["task"],
+        version=cfg["exp"]["fold"],
     )
-    pl_logger.log_hyperparams(flatten_mapping(
+    tensorboard.log_hyperparams(flatten_mapping(
         {"model": OmegaConf.to_container(cfg["model_cfg"], resolve=True)}))
-    pl_logger.log_hyperparams(flatten_mapping(
+    tensorboard.log_hyperparams(flatten_mapping(
         {"trainer": OmegaConf.to_container(cfg["trainer_cfg"], resolve=True)}))
 
     logger.remove()
@@ -258,10 +252,6 @@ def _train(
     splits = load_pickle(Path(cfg.host.preprocessed_output_dir) / datamodule.splits_file)
     save_pickle(splits, train_dir / "splits.pkl")
 
-    trainer_kwargs = {}
-    if cfg["train"]["mode"].lower() == "resume":
-        trainer_kwargs["resume_from_checkpoint"] = train_dir / "model_last.ckpt"
-
     num_gpus = cfg["trainer_cfg"]["gpus"]
     logger.info(f"Using {num_gpus} GPUs for training")
     plugins = cfg["trainer_cfg"].get("plugins", None)
@@ -274,15 +264,17 @@ def _train(
         benchmark=cfg["trainer_cfg"]["benchmark"],
         deterministic=cfg["trainer_cfg"]["deterministic"],
         callbacks=callbacks,
-        logger=pl_logger,
+        logger=tensorboard,
         max_epochs=module.max_epochs,
         num_sanity_val_steps=10,
         plugins=plugins,
-        limit_train_batches=100,
         strategy='ddp_find_unused_parameters_true',
-        **trainer_kwargs
     )
-    trainer.fit(module, datamodule=datamodule)
+
+    if cfg["train"]["mode"].lower() == "resume":
+        trainer.fit(module, datamodule=datamodule, ckpt_path=str(train_dir / "model_last.ckpt"))
+    else:
+        trainer.fit(module, datamodule=datamodule)
 
     if do_sweep:
         case_ids = splits[cfg["exp"]["fold"]]["val"]

@@ -22,6 +22,7 @@ from loguru import logger
 import torch
 from torch.optim.lr_scheduler import _LRScheduler
 from pytorch_lightning.callbacks import StochasticWeightAveraging
+from lightning_fabric.utilities.types import LRScheduler
 # from pytorch_lightning.trainer.optimizers import _get_default_scheduler_config
 from pytorch_lightning.utilities import rank_zero_warn
 
@@ -54,7 +55,7 @@ class BaseSWA(StochasticWeightAveraging):
         """
         super().__init__(
             swa_epoch_start=swa_epoch_start,
-            swa_lrs=0.001,
+            swa_lrs=0.01,
             annealing_epochs=10,
             annealing_strategy="cos",
             avg_fn=avg_fn,
@@ -82,20 +83,11 @@ class BaseSWA(StochasticWeightAveraging):
             
             # move average model to request device.
             self._average_model = self._average_model.to(self._device or pl_module.device)
-
             _scheduler = self.get_swa_scheduler(optimizer)
-            # self._swa_scheduler = _get_default_scheduler_config()
-            self._swa_scheduler = {}
-            if not isinstance(_scheduler, dict):
-                _scheduler = {"scheduler": _scheduler}
-            self._swa_scheduler.update(_scheduler)
 
-            if trainer.lr_schedulers:
-                lr_scheduler = trainer.lr_schedulers[0]["scheduler"]
-                rank_zero_warn(f"Swapping lr_scheduler {lr_scheduler} for {self._swa_scheduler}")
-                trainer.lr_schedulers[0] = self._swa_scheduler
-            else:
-                trainer.lr_schedulers.append(self._swa_scheduler)
+            lr_scheduler = trainer.lr_scheduler_configs[0].scheduler
+            rank_zero_warn(f"Swapping lr_scheduler {lr_scheduler} for {self._swa_scheduler}")
+            trainer.lr_scheduler_configs[0].scheduler = _scheduler["scheduler"]
 
             self.n_averaged = torch.tensor(0, dtype=torch.long, device=pl_module.device)
 
