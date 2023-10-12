@@ -25,6 +25,26 @@ from nndet.arch.conv import ConvInstanceRelu, ConvGroupRelu
 
 from nndet.ptmodule import MODULE_REGISTRY
 
+import torch
+
+def load_pretrained_weights(network, fname, verbose=True):
+    saved_model = torch.load(fname)
+    pretrained_dict = saved_model['state_dict']
+
+    new_state_dict = {}
+
+    for k, value in pretrained_dict.items():
+        key = k
+        if key.startswith('model.'):
+            key = key[6:]
+        new_state_dict[key] = value
+
+    pretrained_dict = new_state_dict
+
+    model_dict = network.state_dict()
+    model_dict.update(pretrained_dict)
+    network.load_state_dict(model_dict)
+
 
 @MODULE_REGISTRY.register
 class RetinaUNetV001(RetinaUNetModule):
@@ -36,3 +56,23 @@ class RetinaUNetV001(RetinaUNetModule):
     head_regressor_cls = GIoURegressor
     matcher_cls = ATSSMatcher
     segmenter_cls = DiCESegmenterFgBg
+
+    @classmethod
+    def from_config_plan(cls,
+                         model_cfg: dict,
+                         plan_arch: dict,
+                         plan_anchors: dict,
+                         log_num_anchors: str = None,
+                         **kwargs,
+                         ):
+        retinaNet = super().from_config_plan(model_cfg,
+                                             plan_arch,
+                                             plan_anchors,
+                                             log_num_anchors,
+                                             **kwargs
+                                             )
+        if "pretrained_weights" in model_cfg.keys():
+            if model_cfg["pretrained_weights"] != "":
+                load_pretrained_weights(retinaNet, model_cfg["pretrained_weights"], verbose=True)
+
+        return retinaNet
