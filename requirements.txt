@@ -1,3 +1,4 @@
+lightning
 batchgenerators>=0.24
 nnunet==1.7.1
 scipy
@@ -11,7 +12,7 @@ SimpleITK
 tqdm
 loguru
 hydra-core>=1.1.0
-mlflow
+tensorboard
 GitPython
 matplotlib
 seaborn

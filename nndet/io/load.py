@@ -210,8 +210,13 @@ def npz2npy(npz_file: str, delete_npz: bool = False):
     if not os.path.isfile(npz_file[:-3] + "npy"):
         a = load_npz_looped(npz_file, keys=["data", "seg"], num_tries=3)
         if a is not None:
-            np.save(npz_file[:-3] + "npy", a["data"])
-            np.save(npz_file[:-4] + "_seg.npy", a["seg"])
+            a_data = a["data"].astype(np.float16)
+            if a["seg"].max() < 128:
+                a_seg = a["seg"].astype(np.int8)
+            else:
+                a_seg = a["seg"].astype(np.int16)
+            np.save(npz_file[:-3] + "npy", a_data)
+            np.save(npz_file[:-4] + "_seg.npy", a_seg)
     if delete_npz:
         os.remove(npz_file)
 
